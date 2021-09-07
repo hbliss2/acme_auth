@@ -1,45 +1,58 @@
-const express = require('express');
+const express = require("express");
 const app = express();
 app.use(express.json());
-const { models: { User, Note }} = require('./db');
-const path = require('path');
+const {
+  models: { User, Note },
+} = require("./db");
+const path = require("path");
 
-app.get('/', (req, res)=> res.sendFile(path.join(__dirname, 'index.html')));
-
-app.post('/api/auth', async(req, res, next)=> {
+const requireToken = async (req, res, next) => {
   try {
-    res.send({ token: await User.authenticate(req.body)});
+    const userData = await User.byToken(req.headers.authorization);
+    req.user = userData;
+    next();
+  } catch (error) {
+    next(error);
   }
-  catch(ex){
+};
+
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+
+app.post("/api/auth", async (req, res, next) => {
+  try {
+    res.send({ token: await User.authenticate(req.body) });
+  } catch (ex) {
     next(ex);
   }
 });
 
-app.get('/api/auth', async(req, res, next)=> {
+app.get("/api/auth", requireToken, async (req, res, next) => {
   try {
-    res.send(await User.byToken(req.headers.authorization));
-  }
-  catch(ex){
+    res.send(req.user);
+  } catch (ex) {
     next(ex);
   }
 });
 
-app.get('/api/users/:userId/notes', async (req, res, next) => {
+app.get("/api/users/:userId/notes", requireToken, async (req, res, next) => {
   try {
-    const allUsers = await User.findAll( {
-      where: {
-        id: req.params.userId
-      },
-      include: {
-        model: Note
-      }
-    })
-    res.send(allUsers[0])
+    const curUser = req.user;
+    if (+req.params.userId === curUser.id) {
+      const allUsers = await User.findAll({
+        where: {
+          id: req.params.userId,
+        },
+        include: {
+          model: Note,
+        },
+      });
+      res.send(allUsers[0]);
+    }
   } catch (err) {
-    next(err)
+    next(err);
   }
-})
-app.use((err, req, res, next)=> {
+});
+app.use((err, req, res, next) => {
   console.log(err);
   res.status(err.status || 500).send({ error: err.message });
 });

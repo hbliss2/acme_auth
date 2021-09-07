@@ -65,17 +65,17 @@
               authorization: token
             }
           });
-          const { data } = await axios.get(`/api/users/${response.data.id}/notes`)
+          const { data } = await axios.get(`/api/users/${response.data.id}/notes`, {
+            headers: {
+              authorization: token
+            }
+          })
           this.setState({ auth: response.data, notes: data.notes });
         }
       }
-      // async getNotes(userId){
-      //   let { data } = await axios.get(`/api/users/${userId}/notes`)
-      //   this.setState( {...state, notes: data.notes})
-      // }
+
       componentDidMount(){
         this.attemptTokenLogin();
-        // this.getNotes(auth.id)
       }
       async signIn(credentials){
         let response = await axios.post('/api/auth', credentials);
